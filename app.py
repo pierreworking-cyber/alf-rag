@@ -1,12 +1,55 @@
-import retrieve
 import answer
+import documents
+import retrieve
+
+
+def choose_document():
+    available = documents.available_documents()
+
+    if not available:
+        print("No documents found.")
+        return None
+
+    print()
+    print("Available documents:")
+    print()
+
+    for number, path in enumerate(available, start=1):
+        print(f"{number}. {path.stem}")
+
+    print()
+
+    while True:
+        choice = input(
+            f"Select document [1-{len(available)}]: "
+        ).strip()
+
+        try:
+            number = int(choice)
+        except ValueError:
+            print("Please enter a number.")
+            continue
+
+        if 1 <= number <= len(available):
+            return available[number - 1]
+
+        print("Please choose one of the numbers shown.")
 
 
 def main():
     print()
     print("ALF-RAG")
     print("=======")
-    print("Ask a question about The Difference Engine.")
+
+    source = choose_document()
+
+    if source is None:
+        return
+
+    print()
+    print(f"Using: {source.stem}")
+    print()
+    print("Ask a question.")
     print("Type 'quit' or 'exit' to leave.")
     print()
 
@@ -23,10 +66,14 @@ def main():
         print()
         print("Retrieving evidence...")
 
-        chunks = retrieve.retrieve(question)
+        chunks = retrieve.retrieve(
+            question,
+            source,
+        )
+
         evidence = retrieve.build_evidence(
-                question,
-                chunks,
+            question,
+            chunks,
         )
 
         print("Generating answer...")

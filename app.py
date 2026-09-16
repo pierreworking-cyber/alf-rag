@@ -46,11 +46,13 @@ def main():
     if source is None:
         return
 
-    model = retrieve.load_model()
-
-
     print()
     print(f"Using: {source.stem}")
+    print()
+    print("Loading retrieval engine...")
+
+    model = retrieve.load_model()
+
     print()
     print("Ask a question.")
     print("Type 'quit' or 'exit' to leave.")
@@ -106,7 +108,6 @@ def main():
             + ", ".join(chunk_ids)
         )
         print()
-
 
 if __name__ == "__main__":
     main()

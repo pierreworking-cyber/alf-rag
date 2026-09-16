@@ -11,8 +11,10 @@ DEFAULT_SOURCE = Path(
 
 TOP_K = 5
 
+def load_model():
+    return CrossEncoder(MODEL)
 
-def retrieve(question, source):
+def retrieve(question, source, model):
     document = json.loads(
         source.read_text(encoding="utf-8")
     )
@@ -23,7 +25,6 @@ def retrieve(question, source):
     # Semantic retrieval
     # ------------------------------------------------------------
 
-    model = CrossEncoder(MODEL)
 
     pairs = [
         [question, chunk["text"]]
@@ -93,7 +94,8 @@ def main():
 
     selected = retrieve(
             question,
-            DEFAULT_SOURCE,)
+            DEFAULT_SOURCE,
+            model,)
 
     # ------------------------------------------------------------
     # Write evidence for the next stage

@@ -46,6 +46,9 @@ def main():
     if source is None:
         return
 
+    model = retrieve.load_model()
+
+
     print()
     print(f"Using: {source.stem}")
     print()
@@ -69,6 +72,7 @@ def main():
         chunks = retrieve.retrieve(
             question,
             source,
+            model,
         )
 
         evidence = retrieve.build_evidence(

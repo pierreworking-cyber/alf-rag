@@ -24,19 +24,10 @@ def main():
         print("Retrieving evidence...")
 
         chunks = retrieve.retrieve(question)
-
-        evidence_parts = [
-            f"Question: {question}",
-            "Retrieved evidence:",
-        ]
-
-        for chunk in chunks:
-            evidence_parts.append(
-                f"\n--- Chunk {chunk['id']} ---\n"
-                f"{chunk['text']}"
-            )
-
-        evidence = "\n".join(evidence_parts)
+        evidence = retrieve.build_evidence(
+                question,
+                chunks,
+        )
 
         print("Generating answer...")
         print()

@@ -12,6 +12,17 @@ DEFAULT_SOURCE = Path(
 TOP_K = 5
 
 def load_model():
+    import logging
+
+    from transformers.utils import logging as transformers_logging
+
+    transformers_logging.disable_progress_bar()
+    transformers_logging.set_verbosity_error()
+
+    logging.getLogger("huggingface_hub").setLevel(
+        logging.ERROR
+    )
+
     return CrossEncoder(MODEL)
 
 def retrieve(question, source, model):

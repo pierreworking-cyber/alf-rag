@@ -4,17 +4,17 @@ from pathlib import Path
 
 from sentence_transformers import CrossEncoder
 
-
-SOURCE = Path("chunks/ebooks/stress/The Difference Engine.json")
-
 MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
+DEFAULT_SOURCE = Path(
+    "chunks/ebooks/stress/The Difference Engine.json"
+)
 
 TOP_K = 5
 
 
-def retrieve(question):
+def retrieve(question, source):
     document = json.loads(
-        SOURCE.read_text(encoding="utf-8")
+        source.read_text(encoding="utf-8")
     )
 
     chunks = document["chunks"]
@@ -91,7 +91,9 @@ def main():
 
     question = " ".join(sys.argv[1:])
 
-    selected = retrieve(question)
+    selected = retrieve(
+            question,
+            DEFAULT_SOURCE,)
 
     # ------------------------------------------------------------
     # Write evidence for the next stage

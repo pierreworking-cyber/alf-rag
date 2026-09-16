@@ -1,0 +1,8 @@
+.DS_Store
+__pycache__/
+.venv/
+chunks/
+markdown/
+retrieved_evidence.txt
+test_results/
+documents/

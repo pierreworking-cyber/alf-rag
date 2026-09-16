@@ -2,22 +2,10 @@ import subprocess
 from pathlib import Path
 
 
-EVIDENCE = Path("retrieved_evidence.txt")
 MODEL = "gemma4:31b-cloud"
 
 
-def main():
-    if not EVIDENCE.exists():
-        print(
-            "No retrieved evidence found. "
-            "Run retrieve.py first."
-        )
-        return
-
-    evidence = EVIDENCE.read_text(
-        encoding="utf-8"
-    )
-
+def answer(question, evidence):
     prompt = f"""
 You are answering a question about a book.
 
@@ -57,9 +45,6 @@ Here is the question and retrieved evidence:
 {evidence}
 """
 
-    print("Asking LLM...")
-    print()
-
     result = subprocess.run(
         [
             "ollama",
@@ -72,11 +57,49 @@ Here is the question and retrieved evidence:
     )
 
     if result.returncode != 0:
-        print("Ollama failed:")
-        print(result.stderr)
+        raise RuntimeError(
+            f"Ollama failed:\n{result.stderr}"
+        )
+
+    output = result.stdout.strip()
+
+    if "...done thinking." in output:
+        output = output.split(
+            "...done thinking.",
+            1,
+        )[1].strip()
+
+    return output
+
+
+def main():
+    evidence_file = Path("retrieved_evidence.txt")
+
+    if not evidence_file.exists():
+        print(
+            "No retrieved evidence found. "
+            "Run retrieve.py first."
+        )
         return
 
-    print(result.stdout)
+    evidence = evidence_file.read_text(
+        encoding="utf-8"
+    )
+
+    question = evidence.split(
+        "Retrieved evidence:",
+        1,
+    )[0].strip()
+
+    print("Asking LLM...")
+    print()
+
+    print(
+        answer(
+            question,
+            evidence,
+        )
+    )
 
 
 if __name__ == "__main__":

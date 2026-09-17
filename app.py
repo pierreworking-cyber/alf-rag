@@ -5,15 +5,22 @@ import question
 import retrieve
 
 
-def choose_document():
-    available = documents.available_documents()
+def choose_processed_document():
+    available = [
+        path
+        for path in documents.available_documents()
+        if documents.is_processed(path)
+    ]
 
     if not available:
-        print("No documents found.")
+        print()
+        print("No processed books available.")
+        print("Process a book first.")
+        print()
         return None
 
     print()
-    print("Available documents:")
+    print("Available books:")
     print()
 
     for number, path in enumerate(available, start=1):
@@ -23,8 +30,11 @@ def choose_document():
 
     while True:
         choice = input(
-            f"Select document [1-{len(available)}]: "
+            f"Select [1-{len(available)}]: "
         ).strip()
+
+        if choice.lower() in {"quit", "exit"}:
+            return None
 
         try:
             number = int(choice)
@@ -65,6 +75,8 @@ def choose_new_document():
             f"Select [1-{len(available)}]: "
         ).strip()
 
+        if choice.lower() in {"quit", "exit"}:
+            return None
         try:
             number = int(choice)
         except ValueError:
@@ -96,7 +108,7 @@ def process_book():
 
 
 def discuss_book():
-    source = choose_document()
+    source = choose_processed_document()
 
     if source is None:
         return

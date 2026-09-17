@@ -4,18 +4,13 @@ from pathlib import Path
 from docling.document_converter import DocumentConverter
 
 
-SOURCE = Path("documents/ebooks/stress/The Difference Engine.epub")
-OUTPUT = Path("chunks/ebooks/stress/The Difference Engine.json")
+DOCUMENTS_ROOT = Path("documents")
+CHUNKS_ROOT = Path("chunks")
 
 MAX_WORDS = 500
 
 
-def main():
-    converter = DocumentConverter()
-    result = converter.convert(SOURCE)
-
-    document = result.document
-
+def chunk_document(document):
     chunks = []
     current_items = []
     current_words = 0
@@ -46,25 +41,74 @@ def main():
             "text": "\n\n".join(current_items),
         })
 
+    return chunks
+
+
+def chunk_path(source):
+    relative = source.relative_to(DOCUMENTS_ROOT)
+
+    return (
+        CHUNKS_ROOT
+        / relative.parent
+        / f"{source.stem}.json"
+    )
+
+
+def process_document(source):
+    source = Path(source)
+
+
+
+
+    if source.suffix.lower() == ".pdf":
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        from docling.document_converter import PdfFormatOption
+
+        pipeline_options = PdfPipelineOptions(
+            do_ocr=False,
+            force_backend_text=True,
+        )
+
+        converter = DocumentConverter(
+            format_options={
+                "pdf": PdfFormatOption(
+                    pipeline_options=pipeline_options,
+                )
+            }
+        )
+    else:
+        converter = DocumentConverter()
+
+
+
+
+    result = converter.convert(source)
+
+    document = result.document
+    chunks = chunk_document(document)
+
     output = {
         "document": {
             "name": document.name,
-            "source_file": SOURCE.name,
-            "format": SOURCE.suffix.lstrip("."),
+            "source_file": source.name,
+            "format": source.suffix.lstrip(".").lower(),
         },
         "chunks": chunks,
     }
 
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    output_path = chunk_path(source)
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
-    OUTPUT.write_text(
-        json.dumps(output, indent=2, ensure_ascii=False),
+    output_path.write_text(
+        json.dumps(
+            output,
+            indent=2,
+            ensure_ascii=False,
+        ),
         encoding="utf-8",
     )
 
-    print(f"Created {OUTPUT}")
-    print(f"Chunks: {len(chunks)}")
-
-
-if __name__ == "__main__":
-    main()
+    return output_path, len(chunks)

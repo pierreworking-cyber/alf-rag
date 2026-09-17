@@ -2,6 +2,9 @@ import json
 import sys
 from pathlib import Path
 
+import documents
+from sentence_transformers import CrossEncoder
+
 from sentence_transformers import CrossEncoder
 
 MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
@@ -26,8 +29,10 @@ def load_model():
     return CrossEncoder(MODEL)
 
 def retrieve(question, source, model):
+    chunk_file = documents.chunk_path(source)
+
     document = json.loads(
-        source.read_text(encoding="utf-8")
+        chunk_file.read_text(encoding="utf-8")
     )
 
     chunks = document["chunks"]

@@ -5,8 +5,6 @@ from pathlib import Path
 import documents
 from sentence_transformers import CrossEncoder
 
-from sentence_transformers import CrossEncoder
-
 MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
 DEFAULT_SOURCE = Path(
     "chunks/ebooks/stress/The Difference Engine.json"

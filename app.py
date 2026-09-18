@@ -99,7 +99,7 @@ def process_book():
     print(f"Processing: {source.stem}")
     print()
 
-    output_path, chunk_count = chunker.process_document(source)
+    _, chunk_count = chunker.process_document(source)
 
     print("Processing complete.")
     print(f"Created {chunk_count} chunks.")
@@ -190,7 +190,6 @@ def discuss_book():
 
         try:
             response = answer.answer(
-                retrieval_question,
                 evidence,
             )
         except RuntimeError as error:

@@ -4,9 +4,7 @@ from pathlib import Path
 
 from docling.document_converter import DocumentConverter
 
-
-DOCUMENTS_ROOT = Path("documents")
-CHUNKS_ROOT = Path("chunks")
+from documents import chunk_path
 
 MAX_WORDS = 500
 
@@ -49,10 +47,7 @@ def chunk_document(document):
 
         is_major_heading = (
             is_section_header
-            and (
-                text.startswith("Chapter ")
-                or text.startswith("Appendix ")
-            )
+            and text.startswith(("Chapter ", "Appendix "))
         )
 
         is_numbered_section = (
@@ -138,14 +133,6 @@ def chunk_document(document):
 
     return chunks, structure
 
-def chunk_path(source):
-    relative = source.relative_to(DOCUMENTS_ROOT)
-
-    return (
-        CHUNKS_ROOT
-        / relative.parent
-        / f"{source.stem}.json"
-    )
 
 def process_document(source):
     source = Path(source)

@@ -1,9 +1,8 @@
 import json
-import sys
-from pathlib import Path
+
+from sentence_transformers import CrossEncoder
 
 import documents
-from sentence_transformers import CrossEncoder
 
 MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
 
@@ -59,20 +58,6 @@ def retrieve(question, source, model):
         key=lambda result: result["score"],
         reverse=True,
     )
-
-    # ------------------------------------------------------------
-    # Display retrieval ranking
-    # ------------------------------------------------------------
-
-    print()
-    print("RETRIEVAL RANKING")
-    print("-----------------")
-
-    for rank, result in enumerate(results[:10], start=1):
-        print(
-            f"{rank:2}. Chunk {result['id']:>3} "
-            f"score={result['score']:.4f}"
-        )
 
     # ------------------------------------------------------------
     # Select evidence
@@ -152,46 +137,3 @@ def build_evidence(question, chunks):
         )
 
     return "\n".join(evidence_parts)
-
-
-def main():
-    if len(sys.argv) < 2:
-        print("Usage:")
-        print('  python retrieve.py "your question here"')
-        sys.exit(1)
-
-    question = " ".join(sys.argv[1:])
-
-    model = load_model()
-
-    selected = retrieve(
-        question,
-        DEFAULT_SOURCE,
-        model,
-    )
-
-    evidence = build_evidence(
-        question,
-        selected,
-    )
-
-    Path("retrieved_evidence.txt").write_text(
-        evidence,
-        encoding="utf-8",
-    )
-
-    print()
-    print(f"Question: {question}")
-    print()
-    print("SELECTED CHUNKS")
-    print("---------------")
-
-    for chunk in selected:
-        print(f"Chunk {chunk['id']}")
-
-    print()
-    print("Evidence written to retrieved_evidence.txt")
-
-
-if __name__ == "__main__":
-    main()

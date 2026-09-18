@@ -1,6 +1,5 @@
 import subprocess
 
-
 MODEL = "gemma4:31b-cloud"
 
 
@@ -71,6 +70,7 @@ Current question:
         input=prompt,
         text=True,
         capture_output=True,
+        check=False,
     )
 
     if result.returncode != 0:

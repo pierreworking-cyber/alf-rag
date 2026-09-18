@@ -1,11 +1,9 @@
 import subprocess
-from pathlib import Path
-
 
 MODEL = "gemma4:31b-cloud"
 
 
-def answer(question, evidence):
+def answer(evidence):
     prompt = f"""
 You are answering a question about a book.
 
@@ -54,6 +52,7 @@ Here is the question and retrieved evidence:
         input=prompt,
         text=True,
         capture_output=True,
+        check=False,
     )
 
     if result.returncode != 0:
@@ -70,37 +69,3 @@ Here is the question and retrieved evidence:
         )[1].strip()
 
     return output
-
-
-def main():
-    evidence_file = Path("retrieved_evidence.txt")
-
-    if not evidence_file.exists():
-        print(
-            "No retrieved evidence found. "
-            "Run retrieve.py first."
-        )
-        return
-
-    evidence = evidence_file.read_text(
-        encoding="utf-8"
-    )
-
-    question = evidence.split(
-        "Retrieved evidence:",
-        1,
-    )[0].strip()
-
-    print("Asking LLM...")
-    print()
-
-    print(
-        answer(
-            question,
-            evidence,
-        )
-    )
-
-
-if __name__ == "__main__":
-    main()

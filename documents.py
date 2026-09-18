@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 DOCUMENTS_ROOT = Path("documents")
 CHUNKS_ROOT = Path("chunks")
 

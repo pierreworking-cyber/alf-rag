@@ -1,9 +1,9 @@
 import sys
+import xml.etree.ElementTree as ET
 from collections import Counter
 from pathlib import Path
-import xml.etree.ElementTree as ET
 
-from ebooklib import epub, ITEM_DOCUMENT
+from ebooklib import ITEM_DOCUMENT, epub
 
 
 def local_name(tag):

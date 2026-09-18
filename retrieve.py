@@ -6,9 +6,6 @@ import documents
 from sentence_transformers import CrossEncoder
 
 MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
-DEFAULT_SOURCE = Path(
-    "chunks/ebooks/stress/The Difference Engine.json"
-)
 
 TOP_K = 5
 CONTEXT_RADIUS = 2
@@ -142,8 +139,6 @@ def expand_context(chunks, structure, selected_ids):
     ]
 
 
-
-
 def build_evidence(question, chunks):
     evidence_parts = [
         f"Question: {question}",
@@ -167,41 +162,23 @@ def main():
 
     question = " ".join(sys.argv[1:])
 
+    model = load_model()
+
     selected = retrieve(
-            question,
-            DEFAULT_SOURCE,
-            model,)
-
-    # ------------------------------------------------------------
-    # Write evidence for the next stage
-    # ------------------------------------------------------------
-
-    evidence_parts = []
-
-    evidence_parts.append(
-        f"Question: {question}"
+        question,
+        DEFAULT_SOURCE,
+        model,
     )
 
-    evidence_parts.append(
-        "Retrieved evidence:"
+    evidence = build_evidence(
+        question,
+        selected,
     )
-
-    for chunk in selected:
-        evidence_parts.append(
-            f"\n--- Chunk {chunk['id']} ---\n"
-            f"{chunk['text']}"
-        )
-
-    evidence = "\n".join(evidence_parts)
 
     Path("retrieved_evidence.txt").write_text(
         evidence,
         encoding="utf-8",
     )
-
-    # ------------------------------------------------------------
-    # Display summary
-    # ------------------------------------------------------------
 
     print()
     print(f"Question: {question}")

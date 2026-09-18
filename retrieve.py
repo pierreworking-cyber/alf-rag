@@ -11,6 +11,7 @@ DEFAULT_SOURCE = Path(
 )
 
 TOP_K = 5
+CONTEXT_RADIUS = 2
 
 def load_model():
     import logging
@@ -39,7 +40,6 @@ def retrieve(question, source, model):
     # Semantic retrieval
     # ------------------------------------------------------------
 
-
     pairs = [
         [question, chunk["text"]]
         for chunk in chunks
@@ -64,6 +64,20 @@ def retrieve(question, source, model):
     )
 
     # ------------------------------------------------------------
+    # Display retrieval ranking
+    # ------------------------------------------------------------
+
+    print()
+    print("RETRIEVAL RANKING")
+    print("-----------------")
+
+    for rank, result in enumerate(results[:10], start=1):
+        print(
+            f"{rank:2}. Chunk {result['id']:>3} "
+            f"score={result['score']:.4f}"
+        )
+
+    # ------------------------------------------------------------
     # Select evidence
     # ------------------------------------------------------------
 
@@ -75,13 +89,60 @@ def retrieve(question, source, model):
     # Chunk 1 remains deliberately included.
     selected_ids.add(1)
 
-    selected = [
-        chunk
-        for chunk in chunks
-        if chunk["id"] in selected_ids
-    ]
+    selected = expand_context(
+        chunks,
+        document["structure"],
+        selected_ids,
+    )
 
     return selected
+
+def structure_for_chunk(structure, chunk_id):
+    for entry in structure:
+        if entry["start_chunk"] <= chunk_id <= entry["end_chunk"]:
+            return entry
+
+    return None
+
+
+def expand_context(chunks, structure, selected_ids):
+    chunk_by_id = {
+        chunk["id"]: chunk
+        for chunk in chunks
+    }
+
+    expanded_ids = set(selected_ids)
+
+    for chunk_id in selected_ids:
+        entry = structure_for_chunk(
+            structure,
+            chunk_id,
+        )
+
+        if entry is None:
+            continue
+
+        start = max(
+            entry["start_chunk"],
+            chunk_id - CONTEXT_RADIUS,
+        )
+
+        end = min(
+            entry["end_chunk"],
+            chunk_id + CONTEXT_RADIUS,
+        )
+
+        expanded_ids.update(
+            range(start, end + 1)
+        )
+
+    return [
+        chunk_by_id[chunk_id]
+        for chunk_id in sorted(expanded_ids)
+    ]
+
+
+
 
 def build_evidence(question, chunks):
     evidence_parts = [

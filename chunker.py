@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 from docling.document_converter import DocumentConverter
@@ -12,14 +13,105 @@ MAX_WORDS = 500
 
 def chunk_document(document):
     chunks = []
+    structure = []
+
+    section_headers = [
+        item.text.strip()
+        for item in document.texts
+        if str(getattr(item, "label", "")) == "section_header"
+        and item.text.strip()
+    ]
+
+    has_parts = any(
+        text.startswith("Part ")
+        for text in section_headers
+    )
+
     current_items = []
     current_words = 0
+    current_structure = None
+    structure_started = False
 
     for item in document.texts:
         text = item.text.strip()
 
         if not text:
             continue
+
+        is_section_header = (
+            str(getattr(item, "label", "")) == "section_header"
+        )
+
+        is_part = (
+            is_section_header
+            and text.startswith("Part ")
+        )
+
+        is_major_heading = (
+            is_section_header
+            and (
+                text.startswith("Chapter ")
+                or text.startswith("Appendix ")
+            )
+        )
+
+        is_numbered_section = (
+            is_section_header
+            and bool(
+                re.match(
+                    r"^[IVXLCDM]+\s+\ue000\s+",
+                    text,
+                )
+            )
+        )
+
+        if has_parts:
+            if is_part:
+                structure_started = True
+        elif is_part or is_major_heading or is_numbered_section:
+            structure_started = True
+
+        if structure_started and (
+            is_part
+            or is_major_heading
+            or is_numbered_section
+        ):
+            if current_items:
+                chunks.append({
+                    "id": len(chunks) + 1,
+                    "text": "\n\n".join(current_items),
+                })
+
+                current_items = []
+                current_words = 0
+
+            if current_structure is not None:
+                current_structure["end_chunk"] = len(chunks)
+
+            if is_part:
+                structure_type = "part"
+            elif text.startswith("Chapter "):
+                structure_type = "chapter"
+            elif text.startswith("Appendix "):
+                structure_type = "appendix"
+            else:
+                structure_type = "section"
+
+            current_structure = {
+                "type": structure_type,
+                "title": text,
+                "start_chunk": len(chunks) + 1,
+                "sections": [],
+            }
+
+            structure.append(current_structure)
+
+        elif structure_started and is_section_header:
+            if current_structure is not None:
+                current_structure["sections"].append({
+                    "title": text,
+                    "start_chunk": len(chunks) + 1,
+                })
 
         words = len(text.split())
 
@@ -41,8 +133,10 @@ def chunk_document(document):
             "text": "\n\n".join(current_items),
         })
 
-    return chunks
+    if current_structure is not None:
+        current_structure["end_chunk"] = len(chunks)
 
+    return chunks, structure
 
 def chunk_path(source):
     relative = source.relative_to(DOCUMENTS_ROOT)
@@ -53,12 +147,8 @@ def chunk_path(source):
         / f"{source.stem}.json"
     )
 
-
 def process_document(source):
     source = Path(source)
-
-
-
 
     if source.suffix.lower() == ".pdf":
         from docling.datamodel.pipeline_options import PdfPipelineOptions
@@ -85,7 +175,7 @@ def process_document(source):
     result = converter.convert(source)
 
     document = result.document
-    chunks = chunk_document(document)
+    chunks, structure = chunk_document(document)
 
     output = {
         "document": {
@@ -93,6 +183,7 @@ def process_document(source):
             "source_file": source.name,
             "format": source.suffix.lstrip(".").lower(),
         },
+        "structure": structure,
         "chunks": chunks,
     }
 

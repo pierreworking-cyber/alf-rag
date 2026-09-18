@@ -1,0 +1,375 @@
+# ALF-RAG — Development Handover
+
+## Mac → Bazzite
+
+Date: 18 September 2026
+
+## Project
+
+`alf-rag` is a general-purpose local book Q&A application.
+
+Repository:
+
+`pierreworking-cyber/alf-rag`
+
+Current branch:
+
+`main`
+
+The project is deliberately simple:
+
+```
+book + question
+    ↓
+retrieve relevant parts
+    ↓
+provide enough surrounding context
+    ↓
+answer using only that evidence
+```
+
+The project should run on both Bazzite/Linux and macOS.
+
+Bazzite remains the primary development/test environment. Mac is a portable/secondary development environment.
+
+---
+
+## Important design principles
+
+* Keep the application simple.
+* Correctness and traceability matter more than cleverness.
+* Do not turn this into a general-purpose RAG framework.
+* Do not optimise retrieval against individual books.
+* Do not run expensive retrieval tests unless they answer a specific unresolved design question.
+* Reuse existing application modules rather than duplicating their logic.
+* Keep the RAG modules platform-neutral.
+* The TUI must be one shared implementation that works on both Linux and macOS.
+* Avoid premature refactoring.
+* Inspect existing code before changing it.
+* Make coherent checkpoints and push stable work.
+* The LLM is not authoritative. If the evidence is insufficient, the answer should say so.
+
+---
+
+## Current application architecture
+
+The main modules are:
+
+* `app.py` — existing rolling CLI / orchestration
+* `answer.py` — generates evidence-grounded answers
+* `question.py` — interprets conversational follow-up questions
+* `retrieve.py` — semantic retrieval and structural context expansion
+* `chunker.py` — processes books into chunks and structural boundaries
+* `documents.py` — discovers books and processed documents
+
+The existing CLI imports the modules explicitly:
+
+```
+import answer
+import chunker
+import documents
+import question
+import retrieve
+```
+
+This is intentional and should remain simple.
+
+The TUI should reuse these modules rather than duplicate their functionality.
+
+Do NOT reuse the CLI functions such as `choose_processed_document()` from the TUI because those functions use `print()` and `input()`. The TUI should handle presentation and user input itself while calling the underlying modules for application/data operations.
+
+---
+
+## Retrieval
+
+Current retrieval approach:
+
+```
+Question
+  ↓
+CrossEncoder
+  ↓
+top 5 semantic chunks
+  ↓
+find each chunk's structural boundary
+  ↓
+expand ±2 chunks within boundary
+  ↓
+deduplicate
+  ↓
+provide evidence to LLM
+  ↓
+answer
+```
+
+Current values:
+
+* `TOP_K = 5`
+* `CONTEXT_RADIUS = 2`
+
+These should not be tuned casually.
+
+Structural expansion was introduced because a single 500-word chunk can be insufficient context.
+
+Previous testing demonstrated that retrieval successfully handled questions such as:
+
+"What happens in 'Tommy's Burglar'?"
+
+The answer correctly described the story using the relevant expanded region.
+
+The application currently retains source/chunk metadata internally for traceability, but raw chunk IDs such as:
+
+`Sources: 1119, 1120, 1121...`
+
+should NOT be part of the normal user-facing TUI.
+
+If source/evidence information is exposed later, meaningful information such as chapter/section names would be preferable.
+
+---
+
+## Processed books currently used for testing
+
+The following books have been processed successfully:
+
+* Anubis Gates — 324 chunks
+* Christopher Hitchens - Letters to a Young Contrarian — 78 chunks
+* Identity_Theft — 50 chunks
+* The Difference Engine — 295 chunks
+* Introducing Python — 324 chunks
+* Maths in Minutes — 84 chunks
+
+Generated chunk JSON files are ignored by Git and are not part of the repository.
+
+Old generated JSON files had an obsolete schema and caused:
+
+`KeyError: 'structure'`
+
+They were deleted and all books were regenerated using the current code.
+
+---
+
+## Dependencies
+
+`requirements.txt` currently contains:
+
+```
+docling==2.128.0
+sentence-transformers==6.0.1
+ebooklib==0.20
+textual==8.2.8
+```
+
+Textual has been added for the new TUI.
+
+On the Mac:
+
+* Python 3.14.6
+* existing `.venv`
+* Textual 8.2.8 installed successfully
+
+Do not copy the Mac `.venv` to Bazzite. Each platform should have its own environment.
+
+---
+
+## Code cleanup completed
+
+Ruff was installed and used to clean up the code.
+
+`ruff check .` currently passes with:
+
+```
+All checks passed!
+```
+
+The following obsolete development scaffolding was removed:
+
+* `test_docling.py`
+* `chunker_stress.py`
+* `retrieval_eval.py`
+* `rerank_eval.py`
+* `rerank_test.py`
+* `ask.py`
+* `test_questions.txt`
+* `test_results/`
+
+The obsolete standalone `main()` in `retrieve.py` was also removed.
+
+Stale hard-coded references to Difference Engine, chunks/ebooks, documents/ebooks and stress testing were removed.
+
+`chunk_path()` was centralised in `documents.py` and imported by `chunker.py`.
+
+`ruff format --check` reports formatting differences, but wholesale formatting was deliberately NOT adopted. Do not reformat the entire project.
+
+---
+
+# TUI development
+
+The next major stage is replacing the rolling CLI experience with a proper Textual TUI.
+
+The desired interface is:
+
+```
+┌──────────────────────┬─────────────────────────────────────────┐
+│ ALF-RAG              │  Discuss a book                         │
+│                      │                                         │
+│ ▸ Discuss a book     │  Select a book to discuss:              │
+│   Process new book   │                                         │
+│   Books              │  Anubis Gates                           │
+│   Delete book        │  Christopher Hitchens...                │
+│                      │  Introducing Python                     │
+│                      │  Maths in Minutes                       │
+├──────────────────────┴─────────────────────────────────────────┤
+│ ↑↓ Select   Enter Discuss   Esc Back   Q Quit                  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+The left-hand navigation is persistent.
+
+The bottom guidance area is contextual and should teach the user what keys are available.
+
+Planned navigation:
+
+* Discuss a book
+* Process a new book
+* Books
+* Delete a book
+
+Delete semantics:
+
+* Delete only generated/processed JSON data.
+* NEVER delete the original EPUB/PDF.
+* Deleting processed data simply makes the original book appear unprocessed again and allows it to be processed again.
+* The delete UI should explicitly reassure the user that the original source file is safe.
+
+---
+
+## Existing ALF TUI as reference
+
+The existing ALF project has a working Textual TUI with this general structure:
+
+```
+Header
+Horizontal main area
+    persistent navigation ListView
+    workspace area
+footer with contextual guidance
+```
+
+The ALF TUI uses workspace switching by changing `.display` on persistent widgets.
+
+This pattern is being reused for ALF-RAG.
+
+Do not introduce a command catalogue or similar abstraction merely for the four ALF-RAG navigation entries.
+
+---
+
+## Current TUI files
+
+The following now exist:
+
+```
+tui/
+    __init__.py
+    app.py
+    discuss_tui.py
+```
+
+Textual is installed and working.
+
+### `tui/discuss_tui.py`
+
+This is the first real TUI widget.
+
+It imports and reuses the existing `documents` module:
+
+```
+from textual.app import ComposeResult
+from textual.containers import Vertical
+from textual.widgets import Label, ListItem, ListView
+
+import documents
+
+
+class DiscussTUI(Vertical):
+    def compose(self) -> ComposeResult:
+        yield Label("Select a book to discuss:")
+
+        books = [
+            path
+            for path in documents.available_documents()
+            if documents.is_processed(path)
+        ]
+
+        yield ListView(
+            *[
+                ListItem(
+                    Label(path.stem),
+                    id=f"book-{index}",
+                )
+                for index, path in enumerate(books)
+            ],
+            id="discuss-books",
+        )
+```
+
+This successfully displays the currently processed books.
+
+The TUI should continue using the existing modules rather than copying their logic.
+
+---
+
+## Current `tui/app.py`
+
+The TUI shell is now working.
+
+It has:
+
+* persistent left navigation
+* right-hand workspace
+* contextual footer
+* Q quit binding
+* workspace switching
+* Discuss workspace containing the processed-book list
+
+Important: the `workspace` container MUST be inside the `Horizontal(id="main")` container.
+
+The working structure is:
+
+```
+with Horizontal(id="main"):
+    yield ListView(...)
+
+    with Vertical(id="workspace"):
+        yield DiscussTUI(...)
+        yield Static(...)
+        yield Static(...)
+        yield Static(...)
+```
+
+The CSS currently gives:
+
+* navigation: 25%
+* workspace: 75%
+* main area: remaining screen height
+* workspace: vertical layout
+
+The `show_workspace()` method controls which workspace is displayed.
+
+---
+
+## Current state of the TUI
+
+The following now works:
+
+1. `python -m tui.app`
+2. TUI starts successfully.
+3. Left navigation is visible.
+4. ↑/↓ moves through navigation.
+5. Navigation changes the displayed workspace.
+6. Q quits.
+7. Discuss workspace displays processed books.
+8. The navigation and detail/workspace areas are correctly side-by-side.
+9. Tab can move between the navigation and detail areas.
+
+The current TUI has NOT yet conne
+
